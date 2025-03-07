@@ -90,7 +90,7 @@ class CameraPage extends StatelessWidget {
                         ),
                         child: FlutterMap(
                           options: MapOptions(
-                            initialZoom: 10.0,
+                            initialZoom: 12.0,
                             initialCenter: LatLng(
                               locationData?.latitude ?? 19.183,
                               locationData?.longitude ?? 72.862,
