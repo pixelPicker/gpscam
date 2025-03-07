@@ -1,7 +1,11 @@
+import 'package:camera/camera.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:geocoding/geocoding.dart';
-import 'package:intl/intl.dart';
+import 'package:gpscam/camera_page.dart';
+import 'package:gpscam/edit_page.dart';
 import 'package:location/location.dart' as loc;
+import 'package:permission_handler/permission_handler.dart';
 
 const headerTextStyle = TextStyle(
   fontSize: 24.0,
@@ -12,8 +16,11 @@ const paraTextStyle = TextStyle(
   fontFamily: 'Teachers',
 );
 
+late List<CameraDescription> _cameras;
+
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  _cameras = await availableCameras();
   runApp(const MyApp());
 }
 
@@ -49,12 +56,50 @@ class _HomeState extends State<Home> {
   loc.LocationData? locationData;
   late bool isLocationEnabled;
   late loc.PermissionStatus permissionGranted;
+  late CameraController cameraController;
   List<Placemark> locationAddr = [];
 
   @override
   void initState() {
     checkLocationService();
+    checkCameraStatus();
+    cameraController = CameraController(_cameras[0], ResolutionPreset.max);
+    cameraController.initialize().then((_) {
+      if (!mounted) return;
+    }).catchError((Object error) {
+      if (error is CameraException) {
+        switch (error.code) {
+          case 'CameraAccessDenied':
+            checkCameraStatus();
+            break;
+          default:
+        }
+      }
+    });
     super.initState();
+  }
+
+  void takePicture() async {
+    try {
+      final XFile picture = await cameraController.takePicture();
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Error while capturing!")),
+      );
+    }
+  }
+
+  void checkCameraStatus() async {
+    if (!kIsWeb) {
+      final PermissionStatus storageStatus = await Permission.storage.status;
+      if (!storageStatus.isGranted) {
+        await Permission.storage.request();
+      }
+      final PermissionStatus cameraStatus = await Permission.camera.status;
+      if (!cameraStatus.isGranted) {
+        await Permission.camera.request();
+      }
+    }
   }
 
   void checkLocationService() async {
@@ -81,6 +126,7 @@ class _HomeState extends State<Home> {
         locationData!.longitude!,
       );
     }
+    setState(() {});
   }
 
   void updateDateTime(DateTime date, TimeOfDay time) {
@@ -108,7 +154,10 @@ class _HomeState extends State<Home> {
                   updateDateTime: updateDateTime,
                   locationData: locationData,
                   locationAddr: locationAddr)
-              : CameraPage()),
+              : CameraPage(
+                  cameraController: cameraController,
+                  takePicture: takePicture,
+                )),
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: selectedIndex,
         onTap: (value) {
@@ -129,169 +178,17 @@ class _HomeState extends State<Home> {
           ),
         ],
       ),
+      floatingActionButton: (selectedIndex == 0)
+          ? null
+          : FloatingActionButton(
+              mini: true,
+              shape: CircleBorder(),
+              onPressed: () => takePicture(),
+              child: Icon(
+                Icons.circle,
+                size: 32.0,
+              ),
+            ),
     );
-  }
-}
-
-class EditPage extends StatefulWidget {
-  const EditPage({
-    super.key,
-    required this.selectedDate,
-    required this.selectedTime,
-    required this.updateDateTime,
-    required this.locationData,
-    required this.locationAddr,
-  });
-
-  final Function(DateTime, TimeOfDay) updateDateTime;
-  final DateTime selectedDate;
-  final TimeOfDay selectedTime;
-  final loc.LocationData? locationData;
-  final List<Placemark> locationAddr;
-
-  @override
-  State<EditPage> createState() => _EditPageState();
-}
-
-class _EditPageState extends State<EditPage> {
-  void changeDateTime() async {
-    DateTime? date = await showDatePicker(
-      context: context,
-      firstDate: DateTime(2000),
-      lastDate: DateTime.now(),
-    );
-    if (date != null) {
-      setState(() {
-        widget.updateDateTime(date, widget.selectedTime);
-      });
-    }
-  }
-
-  void changeTime() async {
-    TimeOfDay? time = await showTimePicker(
-        context: context, initialTime: widget.selectedTime);
-    if (time != null) {
-      setState(() {
-        widget.updateDateTime(widget.selectedDate, time);
-      });
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final Placemark? place =
-        (widget.locationAddr.isNotEmpty) ? widget.locationAddr[0] : null;
-    return Center(
-      child: Column(
-        spacing: 16.0,
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          GestureDetector(
-            onTap: () => changeDateTime(),
-            child: Container(
-              width: 200.0,
-              padding: EdgeInsets.symmetric(
-                horizontal: 16.0,
-                vertical: 8.0,
-              ),
-              decoration: BoxDecoration(
-                color: Colors.blue.shade100,
-                border: Border.all(width: 2.0, color: Colors.blueAccent),
-                borderRadius: BorderRadius.circular(8.0),
-              ),
-              child: Row(
-                spacing: 16.0,
-                children: [
-                  Icon(
-                    Icons.edit_calendar,
-                    color: Colors.blueAccent,
-                    size: 32.0,
-                  ),
-                  Text(
-                    textAlign: TextAlign.center,
-                    DateFormat.yMd().format(widget.selectedDate),
-                    style: headerTextStyle,
-                  ),
-                ],
-              ),
-            ),
-          ),
-          GestureDetector(
-            onTap: () => changeTime(),
-            child: Container(
-              width: 200.0,
-              padding: EdgeInsets.symmetric(
-                horizontal: 16.0,
-                vertical: 8.0,
-              ),
-              decoration: BoxDecoration(
-                color: Colors.blue.shade100,
-                border: Border.all(width: 2.0, color: Colors.blueAccent),
-                borderRadius: BorderRadius.circular(8.0),
-              ),
-              child: Row(
-                spacing: 16.0,
-                children: [
-                  Icon(
-                    Icons.timer,
-                    color: Colors.blueAccent,
-                    size: 32.0,
-                  ),
-                  Text(
-                    textAlign: TextAlign.center,
-                    widget.selectedTime.format(context),
-                    style: headerTextStyle,
-                  ),
-                ],
-              ),
-            ),
-          ),
-          Container(
-            width: MediaQuery.of(context).size.width - 32.0,
-            padding: EdgeInsets.symmetric(
-              horizontal: 16.0,
-              vertical: 8.0,
-            ),
-            decoration: BoxDecoration(
-              color: Colors.blue.shade100,
-              border: Border.all(width: 2.0, color: Colors.blueAccent),
-              borderRadius: BorderRadius.circular(8.0),
-            ),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              spacing: 16.0,
-              children: [
-                Icon(
-                  Icons.location_on,
-                  color: Colors.blueAccent,
-                  size: 32.0,
-                ),
-                Expanded(
-                  child: Text(
-                    "Lat: ${widget.locationData?.latitude}\nLon: ${widget.locationData?.longitude}\nAddr: ${(place != null) ? "${place.name} ${place.street} ${place.administrativeArea} ${place.subAdministrativeArea} ${place.administrativeArea} ${place.country} ${place.postalCode}" : "Error while fetching address"}",
-                    softWrap: true,
-                    style: paraTextStyle,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class CameraPage extends StatefulWidget {
-  const CameraPage({super.key});
-
-  @override
-  State<CameraPage> createState() => _CameraPageState();
-}
-
-class _CameraPageState extends State<CameraPage> {
-  @override
-  Widget build(BuildContext context) {
-    return const Placeholder();
   }
 }
