@@ -1,15 +1,21 @@
+import 'dart:io';
+
 import 'package:camera/camera.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:gal/gal.dart';
 import 'package:geocoding/geocoding.dart';
 import 'package:gpscam/camera_page.dart';
 import 'package:gpscam/edit_page.dart';
 import 'package:location/location.dart' as loc;
 import 'package:permission_handler/permission_handler.dart';
+import 'package:screenshot/screenshot.dart';
 
 const headerTextStyle = TextStyle(
   fontSize: 24.0,
   fontFamily: 'Teachers',
+  fontWeight: FontWeight.bold,
 );
 const paraTextStyle = TextStyle(
   fontSize: 16.0,
@@ -50,14 +56,25 @@ class Home extends StatefulWidget {
 
 class _HomeState extends State<Home> {
   int selectedIndex = 0;
+
   DateTime selectedDate = DateTime.now();
   TimeOfDay selectedTime = TimeOfDay.now();
+
   loc.Location location = loc.Location();
   loc.LocationData? locationData;
+  List<Placemark> locationAddr = [];
+
   late bool isLocationEnabled;
   late loc.PermissionStatus permissionGranted;
+
   late CameraController cameraController;
-  List<Placemark> locationAddr = [];
+  ScreenshotController screenshotController = ScreenshotController();
+
+  @override
+  void dispose() {
+    cameraController.dispose();
+    super.dispose();
+  }
 
   @override
   void initState() {
@@ -81,10 +98,28 @@ class _HomeState extends State<Home> {
 
   void takePicture() async {
     try {
-      final XFile picture = await cameraController.takePicture();
-    } catch (e) {
+      final image = await screenshotController.capture();
+      if (image == null) throw Error();
+
+      await Gal.putImageBytes(
+        image,
+        album: 'DCIM/Camera',
+        name: 'img_${DateTime.now().millisecondsSinceEpoch}',
+      );
+      if (!mounted) {
+        return;
+      }
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Error while capturing!")),
+        SnackBar(
+          content: Text("Captured Screenshot Successfully"),
+        ),
+      );
+    } catch (e) {
+      if (!mounted) {
+        return;
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Error while capturing! $e")),
       );
     }
   }
@@ -157,6 +192,11 @@ class _HomeState extends State<Home> {
               : CameraPage(
                   cameraController: cameraController,
                   takePicture: takePicture,
+                  locationAddr: locationAddr,
+                  locationData: locationData,
+                  selectedDate: selectedDate,
+                  selectedTime: selectedTime,
+                  screenshotController: screenshotController,
                 )),
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: selectedIndex,
@@ -178,17 +218,6 @@ class _HomeState extends State<Home> {
           ),
         ],
       ),
-      floatingActionButton: (selectedIndex == 0)
-          ? null
-          : FloatingActionButton(
-              mini: true,
-              shape: CircleBorder(),
-              onPressed: () => takePicture(),
-              child: Icon(
-                Icons.circle,
-                size: 32.0,
-              ),
-            ),
     );
   }
 }

@@ -1,16 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:geocoding/geocoding.dart';
+import 'package:gpscam/main.dart';
 import 'package:intl/intl.dart';
 import 'package:location/location.dart' as loc;
-
-const headerTextStyle = TextStyle(
-  fontSize: 24.0,
-  fontFamily: 'Teachers',
-);
-const paraTextStyle = TextStyle(
-  fontSize: 16.0,
-  fontFamily: 'Teachers',
-);
 
 class EditPage extends StatefulWidget {
   const EditPage({
