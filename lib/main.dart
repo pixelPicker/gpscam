@@ -1,9 +1,6 @@
-import 'dart:io';
-
 import 'package:camera/camera.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:gal/gal.dart';
 import 'package:geocoding/geocoding.dart';
 import 'package:gpscam/camera_page.dart';
