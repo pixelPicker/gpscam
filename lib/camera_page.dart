@@ -88,22 +88,34 @@ class CameraPage extends StatelessWidget {
                             8.0,
                           ),
                         ),
-                        child: FlutterMap(
-                          options: MapOptions(
-                            initialZoom: 12.0,
-                            initialCenter: LatLng(
-                              locationData?.latitude ?? 19.183,
-                              locationData?.longitude ?? 72.862,
-                            ),
-                          ),
-                          mapController: mapController,
+                        child: Stack(
+                          alignment: AlignmentDirectional.bottomStart,
                           children: [
-                            TileLayer(
-                              urlTemplate:
-                                  'https://stamen-tiles.a.ssl.fastly.net/terrain/{z}/{x}/{y}.jpg',
-                              fallbackUrl:
-                                  'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
-                              subdomains: ['a', 'b', 'c'],
+                            FlutterMap(
+                              options: MapOptions(
+                                initialZoom: 12.0,
+                                initialCenter: LatLng(
+                                  locationData?.latitude ?? 19.183,
+                                  locationData?.longitude ?? 72.862,
+                                ),
+                              ),
+                              mapController: mapController,
+                              children: [
+                                TileLayer(
+                                  urlTemplate:
+                                      'https://stamen-tiles.a.ssl.fastly.net/terrain/{z}/{x}/{y}.jpg',
+                                  fallbackUrl:
+                                      'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+                                  subdomains: ['a', 'b', 'c'],
+                                )
+                              ],
+                            ),
+                            Padding(
+                              padding: const EdgeInsets.only(left: 8.0),
+                              child: Image.asset(
+                                "assets/google.png",
+                                width: 50,
+                              ),
                             )
                           ],
                         ),
@@ -153,6 +165,33 @@ class CameraPage extends StatelessWidget {
                       ),
                     ],
                   ),
+                ),
+              ),
+              Positioned(
+                top: 20, // Distance from the top
+                right: 20, // Distance from the left
+                child: Row(
+                  children: [
+                    Icon(Icons.location_on, color: Colors.red),
+                    Text(
+                      "GPS",
+                      style: TextStyle(
+                        color: Colors.red,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                        fontFamily: 'Teachers',
+                      ),
+                    ),
+                    Text(
+                      "CAM",
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                        fontFamily: 'Teachers',
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ],
